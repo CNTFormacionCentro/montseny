@@ -11,6 +11,7 @@ function montseny_crear_tablas() {
     $sql = "CREATE TABLE $tabla (
         id mediumint(9) NOT NULL AUTO_INCREMENT,
         user_id bigint(20) UNSIGNED NOT NULL,
+        situacion varchar(10) DEFAULT 'Alta', -- Alta o Baja
         codigo_interno varchar(50) DEFAULT '',
         genero varchar(20) DEFAULT '',
         fecha_nacimiento varchar(50) DEFAULT '',
@@ -27,8 +28,4 @@ function montseny_crear_tablas() {
 
     require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
     dbDelta( $sql );
-    
-    if ( ! get_option( 'montseny_secret_key' ) ) {
-        update_option( 'montseny_secret_key', wp_generate_password( 64, true, true ) );
-    }
 }
