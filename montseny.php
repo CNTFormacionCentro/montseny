@@ -2,8 +2,8 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical v3.5 - REINICIO LIMPIO Y ATÓMICO.
-Version: 3.5
+Description: Gestión sindical v3.6 - REINICIO LIMPIO Y ATÓMICO.
+Version: 3.6
 Author: Montseny Project
 */
 
