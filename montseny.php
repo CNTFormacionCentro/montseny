@@ -2,8 +2,8 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical v3.6 - REINICIO LIMPIO Y ATÓMICO.
-Version: 3.6
+Description: Gestión sindical modular v3.7 - Ahora con modo APP instalable (PWA).
+Version: 3.7
 Author: Montseny Project
 */
 
@@ -18,6 +18,7 @@ require_once MONTSENY_PATH . 'includes/news.php';
 require_once MONTSENY_PATH . 'includes/card-ui.php';
 require_once MONTSENY_PATH . 'includes/app-ui.php';
 require_once MONTSENY_PATH . 'includes/gestion-ui.php';
+require_once MONTSENY_PATH . 'includes/pwa.php';
 
 add_action('template_redirect', function() {
     if ( strpos($_SERVER['REQUEST_URI'], '/montseny') !== false ) {
