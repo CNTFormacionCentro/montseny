@@ -1,17 +1,11 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-add_action('init', function() {
-    if (strpos($_SERVER['REQUEST_URI'], '/montseny') !== false && strpos($_SERVER['REQUEST_URI'], '/montseny/gestion') === false && strpos($_SERVER['REQUEST_URI'], 'manifest.json') === false && strpos($_SERVER['REQUEST_URI'], 'sw.js') === false) {
-        if (isset($_POST['m_login'])) {
-            $u = wp_signon(array('user_login'=>$_POST['log'],'user_password'=>$_POST['pwd'],'remember'=>true), false);
-            wp_redirect(site_url(is_wp_error($u) ? '/montseny/?err=1' : '/montseny/')); exit;
-        }
-        montseny_render_app(); exit;
-    }
-});
-
 function montseny_render_app() {
+    if (isset($_POST['m_login'])) {
+        $u = wp_signon(['user_login'=>$_POST['log'],'user_password'=>$_POST['pwd'],'remember'=>true], false);
+        wp_redirect(site_url(is_wp_error($u) ? '/montseny/?err=1' : '/montseny/')); exit;
+    }
     $local = get_option('montseny_nombre_local', 'CNT');
     $feeds = montseny_get_feeds();
     $u = wp_get_current_user();
@@ -19,14 +13,14 @@ function montseny_render_app() {
     ?>
     <!DOCTYPE html><html><head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Montseny</title>
     
-    <!-- ETIQUETAS PWA -->
+    <!-- CONFIGURACIÓN PWA -->
     <link rel="manifest" href="<?php echo site_url('/montseny/manifest.json'); ?>">
     <meta name="theme-color" content="#CC0000">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
     <style>
         body { font-family: sans-serif; background: #000; color: #fff; margin: 0; padding-bottom: 50px; }
@@ -36,11 +30,12 @@ function montseny_render_app() {
         .news-img { width: 80px; height: 80px; background-size: cover; background-position: center; flex-shrink: 0; }
         .news-txt { padding: 10px; }
         .btn { background: #CC0000; color: #fff; display: block; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; border:none; width:100%; cursor:pointer; margin-top:10px; }
-        .btn-alt { background: #222; border: 1px solid #444; font-size: 0.8rem; color: #aaa; }
+        .btn-alt { background: #222; border: 1px solid #444; font-size: 0.8rem; color: #aaa; margin-top: 20px;}
+        input { width: 100%; padding: 15px; margin-bottom: 10px; background: #222; color: #fff; border: none; border-radius: 8px; box-sizing: border-box; }
     </style>
-    
+
     <script>
-        // Registrar el Service Worker para permitir la instalación
+        // Registrar el Service Worker para que Android detecte la App
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('<?php echo site_url('/montseny/sw.js'); ?>');
         }
@@ -61,8 +56,9 @@ function montseny_render_app() {
             <?php else : ?>
                 <?php montseny_dibujar_carnet($u->ID); ?>
                 <?php if($is_staff): ?>
-                    <a href="<?php echo site_url('/montseny/'); ?>" class="btn btn-alt" style="margin-bottom:20px;">← Volver a elección de rol</a>
+                    <a href="<?php echo site_url('/montseny/'); ?>" class="btn btn-alt">← Volver a elección de rol</a>
                 <?php endif; ?>
+
                 <h3>Última Hora</h3>
                 <?php foreach($feeds as $n): ?>
                     <a href="<?php echo $n['l']; ?>" target="_blank" style="text-decoration:none; color:inherit;">
@@ -74,7 +70,7 @@ function montseny_render_app() {
                 <a href="<?php echo wp_logout_url(site_url('/montseny')); ?>" class="btn btn-alt">Cerrar Sesión</a>
             <?php endif; ?>
         <?php else : ?>
-            <form method="post"><h3 style="text-align:center;">Acceso Afiliados</h3><input type="text" name="log" placeholder="Email o Usuario" style="width:100%; padding:15px; margin-bottom:10px; background:#222; color:#fff; border:none; border-radius:8px; box-sizing:border-box;"><input type="password" name="pwd" placeholder="Contraseña" style="width:100%; padding:15px; margin-bottom:10px; background:#222; color:#fff; border:none; border-radius:8px; box-sizing:border-box;"><input type="hidden" name="m_login" value="1"><button type="submit" class="btn">ENTRAR</button></form>
+            <form method="post"><h3 style="text-align:center;">Acceso Afiliados</h3><input type="text" name="log" placeholder="Email o Usuario" required><input type="password" name="pwd" placeholder="Contraseña" required><input type="hidden" name="m_login" value="1"><button type="submit" class="btn">ENTRAR</button></form>
         <?php endif; ?>
     </div></body></html>
     <?php
