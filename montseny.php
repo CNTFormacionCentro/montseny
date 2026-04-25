@@ -2,8 +2,8 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical v3.4 - Ramos Oficiales y Grabación de datos corregida.
-Version: 3.4
+Description: Gestión sindical v3.5 - REINICIO LIMPIO Y ATÓMICO.
+Version: 3.5
 Author: Montseny Project
 */
 
