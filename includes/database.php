@@ -1,6 +1,8 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
+// Forzamos que se intente crear la tabla siempre que se active o se cargue el admin por seguridad
+add_action('admin_init', 'montseny_crear_tablas');
 register_activation_hook( MONTSENY_PATH . 'montseny.php', 'montseny_crear_tablas' );
 
 function montseny_crear_tablas() {
