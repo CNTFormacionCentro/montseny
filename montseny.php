@@ -2,8 +2,8 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical y PWA. Versión 1.1 - Con Noticias Reales y Telegram.
-Version: 1.1
+Description: Gestión sindical y PWA. Versión 1.2 - Con Noticias Reales y Telegram.
+Version: 1.2
 Author: Montseny Project
 */
 
