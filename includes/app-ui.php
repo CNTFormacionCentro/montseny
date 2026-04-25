@@ -1,21 +1,33 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-function montseny_render_app() {
-    // Manejo de Login interno
-    if (isset($_POST['m_login'])) {
-        $u = wp_signon(array('user_login'=>$_POST['log'],'user_password'=>$_POST['pwd'],'remember'=>true), false);
-        wp_redirect(site_url(is_wp_error($u) ? '/montseny/?err=1' : '/montseny/')); 
-        exit;
+add_action('init', function() {
+    if (strpos($_SERVER['REQUEST_URI'], '/montseny') !== false && strpos($_SERVER['REQUEST_URI'], '/montseny/gestion') === false && strpos($_SERVER['REQUEST_URI'], 'manifest.json') === false && strpos($_SERVER['REQUEST_URI'], 'sw.js') === false) {
+        if (isset($_POST['m_login'])) {
+            $u = wp_signon(array('user_login'=>$_POST['log'],'user_password'=>$_POST['pwd'],'remember'=>true), false);
+            wp_redirect(site_url(is_wp_error($u) ? '/montseny/?err=1' : '/montseny/')); exit;
+        }
+        montseny_render_app(); exit;
     }
+});
 
+function montseny_render_app() {
     $local = get_option('montseny_nombre_local', 'CNT');
     $feeds = montseny_get_feeds();
     $u = wp_get_current_user();
     $is_staff = current_user_can('montseny_tesorero') || current_user_can('montseny_comunica') || current_user_can('manage_options');
     ?>
-    <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Montseny</title>
+    <!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montseny</title>
+    
+    <!-- ETIQUETAS PWA -->
+    <link rel="manifest" href="<?php echo site_url('/montseny/manifest.json'); ?>">
+    <meta name="theme-color" content="#CC0000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
     <style>
         body { font-family: sans-serif; background: #000; color: #fff; margin: 0; padding-bottom: 50px; }
         .bar { background: #CC0000; padding: 20px; text-align: center; font-weight: bold; position: sticky; top:0; z-index:99; }
@@ -25,14 +37,21 @@ function montseny_render_app() {
         .news-txt { padding: 10px; }
         .btn { background: #CC0000; color: #fff; display: block; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; border:none; width:100%; cursor:pointer; margin-top:10px; }
         .btn-alt { background: #222; border: 1px solid #444; font-size: 0.8rem; color: #aaa; }
-    </style></head><body>
+    </style>
+    
+    <script>
+        // Registrar el Service Worker para permitir la instalación
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('<?php echo site_url('/montseny/sw.js'); ?>');
+        }
+    </script>
+    </head><body>
     <div class="bar"><?php echo $local; ?></div>
     <div class="container">
         <?php if ( is_user_logged_in() ) : ?>
             <?php if ($is_staff && !isset($_GET['view_as_member'])) : ?>
                 <div style="text-align:center; padding: 40px 0;">
                     <h2>Salud, <?php echo $u->display_name; ?></h2>
-                    <p>Has entrado como gestión.</p>
                     <a href="?view_as_member=1" class="btn">VER MI CARNET</a>
                     <?php if (current_user_can('montseny_tesorero') || current_user_can('manage_options')) : ?>
                         <a href="<?php echo site_url('/montseny/gestion'); ?>" class="btn" style="background:#333;">⚙️ PANEL DE GESTIÓN</a>
@@ -41,16 +60,14 @@ function montseny_render_app() {
                 </div>
             <?php else : ?>
                 <?php montseny_dibujar_carnet($u->ID); ?>
-                
                 <?php if($is_staff): ?>
                     <a href="<?php echo site_url('/montseny/'); ?>" class="btn btn-alt" style="margin-bottom:20px;">← Volver a elección de rol</a>
                 <?php endif; ?>
-
                 <h3>Última Hora</h3>
                 <?php foreach($feeds as $n): ?>
                     <a href="<?php echo $n['l']; ?>" target="_blank" style="text-decoration:none; color:inherit;">
                     <div class="card-news">
-                        <?php if(!empty($n['i'])): ?><div class="news-img" style="background-image:url('<?php echo $n['i']; ?>')"></div><?php endif; ?>
+                        <?php if($n['i']): ?><div class="news-img" style="background-image:url('<?php echo $n['i']; ?>')"></div><?php endif; ?>
                         <div class="news-txt"><small style="color:#CC0000"><?php echo $n['f']; ?></small><h4><?php echo $n['t']; ?></h4></div>
                     </div></a>
                 <?php endforeach; ?>
