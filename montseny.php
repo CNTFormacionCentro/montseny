@@ -2,8 +2,8 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical modular v2.9 - Estabilidad, Noticias con imagen y Cambio de Rol.
-Version: 2.9
+Description: Gestión sindical modular v3.0 - Estabilidad, Noticias con imagen y Cambio de Rol.
+Version: 3.0
 Author: Montseny Project
 */
 
