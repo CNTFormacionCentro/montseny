@@ -12,59 +12,80 @@ add_action( 'admin_menu', function() {
     add_submenu_page( 'montseny-dashboard', 'Equipo', 'Equipo', 'manage_options', 'montseny-equipo', 'montseny_equipo_admin' );
 });
 
+// PÁGINA DE AJUSTES (Sindicato y Telegram)
 function montseny_settings_page() {
     if (isset($_POST['m_save_settings'])) {
         update_option('montseny_nombre_local', sanitize_text_field($_POST['l_name']));
-        update_option('montseny_url_local', esc_url_raw($_POST['u_local']));
-        update_option('montseny_url_confederal', esc_url_raw($_POST['u_conf']));
         update_option('montseny_telegram_alias', sanitize_text_field($_POST['t_alias']));
         echo '<div class="updated"><p>Configuración guardada.</p></div>';
     }
-    $l = get_option('montseny_nombre_local', 'CNT Ciudad Real');
-    $u_l = get_option('montseny_url_local', 'https://ciudadreal.cnt.es');
-    $u_c = get_option('montseny_url_confederal', 'https://www.cnt.es');
+    $l = get_option('montseny_nombre_local', 'CNT');
     $t = get_option('montseny_telegram_alias', 'cnt_nacional');
     ?>
     <div class="wrap">
         <h1>Configuración Montseny</h1>
-        <form method="post" style="background:#fff; padding:20px; border:1px solid #ccc; max-width:600px;">
-            <p><label>Nombre Sindicato:</label><br><input type="text" name="l_name" value="<?php echo $l; ?>" class="regular-text"></p>
-            <p><label>URL Web Local (con https://):</label><br><input type="url" name="u_local" value="<?php echo $u_l; ?>" class="regular-text"></p>
-            <p><label>URL Web Confederal:</label><br><input type="url" name="u_conf" value="<?php echo $u_c; ?>" class="regular-text"></p>
-            <p><label>Alias Telegram (sin @):</label><br><input type="text" name="t_alias" value="<?php echo $t; ?>" class="regular-text"></p>
+        <form method="post">
+            <p><label>Nombre Sindicato:</label><br><input type="text" name="l_name" value="<?php echo $l; ?>"></p>
+            <p><label>Alias Telegram:</label><br><input type="text" name="t_alias" value="<?php echo $t; ?>"></p>
             <input type="submit" name="m_save_settings" class="button button-primary" value="Guardar">
         </form>
     </div>
     <?php
 }
 
+// PÁGINA DE EQUIPO (Promocionar Afiliados a Cargos)
 function montseny_equipo_admin() {
-    if (isset($_GET['action']) && $_GET['action'] == 'delete') wp_delete_user(intval($_GET['user_id']));
-    if (isset($_POST['add_eq'])) {
-        $uid = wp_create_user(sanitize_email($_POST['em']), $_POST['ps'], sanitize_email($_POST['em']));
-        if (!is_wp_error($uid)) {
-            wp_update_user(array('ID'=>$uid, 'display_name'=>sanitize_text_field($_POST['no']), 'role'=>$_POST['ro']));
-        }
+    if (isset($_GET['action']) && $_GET['action'] == 'remove_role') {
+        $u = new WP_User(intval($_GET['user_id']));
+        $u->set_role('afiliade'); // Vuelve a ser afiliado normal
+        echo '<div class="updated"><p>Cargo revocado.</p></div>';
     }
+
+    if (isset($_POST['promote_afiliado'])) {
+        $u = new WP_User(intval($_POST['user_id']));
+        $u->set_role($_POST['ro']); // Le asignamos el cargo
+        echo '<div class="updated"><p>'.$u->display_name.' ahora tiene el cargo asignado.</p></div>';
+    }
+
+    $afiliados_nomales = get_users(array('role' => 'afiliade'));
     $equipo = get_users(array('role__in' => array('montseny_tesorero', 'montseny_comunica')));
     ?>
     <div class="wrap">
-        <h1>Equipo de Gestión</h1>
-        <form method="post" style="margin-bottom:20px;">
-            <input type="text" name="no" placeholder="Nombre" required>
-            <input type="email" name="em" placeholder="Email" required>
-            <input type="text" name="ps" placeholder="Pass" required>
-            <select name="ro"><option value="montseny_tesorero">Tesorería</option><option value="montseny_comunica">Comunicación</option></select>
-            <input type="submit" name="add_eq" value="Añadir">
-        </form>
-        <table class="wp-list-table widefat fixed striped">
-            <thead><tr><th>Nombre</th><th>Rol</th><th>Acción</th></tr></thead>
-            <tbody>
-                <?php foreach($equipo as $u): ?>
-                <tr><td><?php echo $u->display_name; ?></td><td><?php echo str_replace('montseny_', '', $u->roles[0]); ?></td><td><a href="?page=montseny-equipo&action=delete&user_id=<?php echo $u->ID; ?>">Quitar</a></td></tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <h1>Cargos de Gestión</h1>
+        <p>Selecciona un afiliado existente para asignarle una responsabilidad.</p>
+        
+        <div style="display:flex; gap:20px; margin-top:20px;">
+            <!-- FORMULARIO: ELEGIR AFILIADO -->
+            <form method="post" style="background:#fff; padding:20px; border:1px solid #ccc; width:300px;">
+                <h3>Asignar Responsabilidad</h3>
+                <label>Elegir Afiliade:</label><br>
+                <select name="user_id" style="width:100%; margin-bottom:15px;">
+                    <?php foreach($afiliados_nomales as $a): ?>
+                        <option value="<?php echo $a->ID; ?>"><?php echo $a->display_name; ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <label>Cargo:</label><br>
+                <select name="ro" style="width:100%; margin-bottom:15px;">
+                    <option value="montseny_tesorero">Tesorería</option>
+                    <option value="montseny_comunica">Comunicación</option>
+                </select>
+                <input type="submit" name="promote_afiliado" class="button button-primary" value="Asignar Cargo">
+            </form>
+
+            <!-- TABLA: CARGOS ACTUALES -->
+            <table class="wp-list-table widefat fixed striped" style="flex:1;">
+                <thead><tr><th>Nombre</th><th>Cargo Actual</th><th>Acción</th></tr></thead>
+                <tbody>
+                    <?php foreach($equipo as $u): ?>
+                    <tr>
+                        <td><strong><?php echo $u->display_name; ?></strong></td>
+                        <td><?php echo (in_array('montseny_tesorero', $u->roles)) ? 'Tesorería' : 'Comunicación'; ?></td>
+                        <td><a href="?page=montseny-equipo&action=remove_role&user_id=<?php echo $u->ID; ?>" style="color:#a00;">Quitar Cargo</a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
     <?php
 }
