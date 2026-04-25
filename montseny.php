@@ -2,15 +2,15 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical y PWA. v1.5 - Ramos oficiales CNT y Noticias reales.
-Version: 1.5
+Description: Gestión sindical y PWA. v1.6 - Corrección definitiva de desactivación y nombres de carpeta.
+Version: 1.6
 Author: Montseny Project
 */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
- * 0. SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA
+ * 0. SISTEMA DE ACTUALIZACIÓN AUTOMÁTICA MEJORADO
  */
 add_filter( 'pre_set_site_transient_update_plugins', 'montseny_check_update' );
 function montseny_check_update( $transient ) {
@@ -32,6 +32,21 @@ function montseny_check_update( $transient ) {
         $transient->response[$plugin_slug] = $obj;
     }
     return $transient;
+}
+
+/**
+ * FILTRO CRÍTICO: Renombrar la carpeta de GitHub a 'montseny' automáticamente
+ * Esto evita que el plugin se desactive al actualizar.
+ */
+add_filter('upgrader_source_selection', 'montseny_fix_github_folder', 10, 4);
+function montseny_fix_github_folder($source, $remote_source, $upgrader, $hook_extra) {
+    if (strpos($source, 'montseny') !== false) {
+        $corrected_source = trailingslashit($remote_source) . 'montseny/';
+        if (rename($source, $corrected_source)) {
+            return $corrected_source;
+        }
+    }
+    return $source;
 }
 
 /**
@@ -57,7 +72,7 @@ class Montseny_Crypto {
 }
 
 /**
- * 2. PANEL ADMIN: GESTIÓN Y ALTA CON RAMOS OFICIALES
+ * 2. PANEL ADMIN: GESTIÓN DE AFILIADOS
  */
 add_action( 'admin_menu', function() {
     add_menu_page( 'Montseny', 'Montseny', 'manage_options', 'montseny-dashboard', 'montseny_dash', 'dashicons-shield-alt', 2 );
@@ -69,7 +84,7 @@ function montseny_lista_afiliados() {
     global $wpdb;
     $tabla = $wpdb->prefix . 'montseny_afiliados';
     $resultados = $wpdb->get_results("SELECT * FROM $tabla");
-    echo '<div class="wrap"><h1>Afiliación Registrada</h1><table class="wp-list-table widefat fixed striped"><thead><tr><th>Nombre</th><th>Email</th><th>DNI</th><th>Sector</th><th>Empresa</th></tr></thead><tbody>';
+    echo '<div class="wrap"><h1>Lista de Afiliación</h1><table class="wp-list-table widefat fixed striped"><thead><tr><th>Nombre</th><th>Email</th><th>DNI</th><th>Ramo</th><th>Empresa</th></tr></thead><tbody>';
     foreach ($resultados as $row) {
         $u = get_userdata($row->user_id);
         echo "<tr><td><strong>{$u->display_name}</strong></td><td>{$u->user_email}</td><td>".Montseny_Crypto::decrypt($row->dni_cifrado)."</td><td>{$row->sector}</td><td>{$row->empresa}</td></tr>";
@@ -90,38 +105,28 @@ function montseny_alta_afiliado() {
                 'user_id' => $user_id,
                 'dni_cifrado' => Montseny_Crypto::encrypt($_POST['dni']),
                 'iban_cifrado' => Montseny_Crypto::encrypt($_POST['iban']),
-                'genero' => $_POST['genero'],
-                'fecha_nacimiento' => $_POST['f_nac'],
-                'telefono' => $_POST['tel'],
                 'sector' => $_POST['sector'],
                 'empresa' => $_POST['empresa']
             ));
-            echo '<div class="updated"><p>Compa registrado con éxito.</p></div>';
+            echo '<div class="updated"><p>Compa registrado correctamente.</p></div>';
         }
     }
     ?>
     <div class="wrap">
-        <h1>Alta de Afiliado</h1>
+        <h1>Nuevo Registro Sindical</h1>
         <form method="post" style="background:#fff; padding:20px; border:1px solid #ccd0d4; max-width:600px;">
             <input type="text" name="nombre" placeholder="Nombre completo" required class="regular-text"><br><br>
             <input type="email" name="email" placeholder="Email" required class="regular-text"><br><br>
             <input type="text" name="dni" placeholder="DNI" required>
             <input type="text" name="iban" placeholder="IBAN" required class="regular-text"><br><br>
-            
-            <label><strong>Ramo / Sector (Clasificación CNT):</strong></label><br>
-            <select name="sector" style="width:100%; margin-top:10px;">
-                <option value="Servicios Varios">Oficios Varios (Catch-all)</option>
+            <label>Ramo CNT:</label><br>
+            <select name="sector" style="width:100%;">
+                <option value="Oficios Varios">Oficios Varios</option>
                 <option value="Metal, Minería y Química">Metal, Minería y Química</option>
-                <option value="Construcción y Madera">Construcción y Madera</option>
-                <option value="Transportes y Comunicaciones">Transportes y Comunicaciones</option>
-                <option value="Comercio, Hostelería y Alimentación">Comercio, Hostelería y Alimentación</option>
                 <option value="Sanidad, Acción Social, Enseñanza y Cultura">Sanidad, Acción Social, Enseñanza y Cultura</option>
+                <option value="Comercio, Hostelería y Alimentación">Comercio, Hostelería y Alimentación</option>
                 <option value="Administración y Servicios Públicos">Administración y Servicios Públicos</option>
-                <option value="Artes Gráficas, Papel y Espectáculos">Artes Gráficas, Papel y Espectáculos</option>
-                <option value="Limpieza, Mantenimiento y Servicios Auxiliares">Limpieza, Mantenimiento y Servicios Auxiliares</option>
-                <option value="Agroalimentario">Agroalimentario</option>
             </select><br><br>
-            
             <input type="text" name="empresa" placeholder="Empresa" class="regular-text"><br><br>
             <input type="submit" name="m_alta" class="button button-primary" value="Registrar Afiliado">
         </form>
@@ -130,33 +135,11 @@ function montseny_alta_afiliado() {
 }
 
 /**
- * 3. LÓGICA DE NOTICIAS
- */
-function montseny_get_feeds() {
-    $feeds = array();
-    $locales = get_posts( array( 'numberposts' => 2 ) );
-    foreach ( $locales as $post ) {
-        $feeds[] = array( 'fuente' => 'Local', 'titulo' => $post->post_title, 'link' => get_permalink($post->ID) );
-    }
-    include_once( ABSPATH . WPINC . '/feed.php' );
-    $rss = fetch_feed( 'https://www.cnt.es/feed/' );
-    if ( ! is_wp_error( $rss ) ) {
-        $maxitems = $rss->get_item_quantity( 2 );
-        $rss_items = $rss->get_items( 0, $maxitems );
-        foreach ( $rss_items as $item ) {
-            $feeds[] = array( 'fuente' => 'Confederal', 'titulo' => $item->get_title(), 'link' => $item->get_permalink() );
-        }
-    }
-    return $feeds;
-}
-
-/**
- * 4. INTERFAZ APP PWA
+ * 3. INTERFAZ APP PWA
  */
 add_action( 'init', function() {
     if ( strpos( $_SERVER['REQUEST_URI'], '/montseny' ) !== false ) {
         $nombre_local = get_option('montseny_nombre_local', 'CNT');
-        $noticias = montseny_get_feeds();
         ?>
         <!DOCTYPE html>
         <html lang="es">
@@ -165,14 +148,11 @@ add_action( 'init', function() {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Montseny</title>
             <style>
-                body { font-family: sans-serif; background: #000; color: #fff; margin: 0; padding-bottom: 80px; }
-                .bar { background: #CC0000; padding: 20px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 100; }
+                body { font-family: sans-serif; background: #000; color: #fff; margin: 0; padding-bottom: 60px; }
+                .bar { background: #CC0000; padding: 20px; text-align: center; font-weight: bold; position: sticky; top: 0; }
                 .container { padding: 15px; }
-                .carnet { background: linear-gradient(135deg, #222 0%, #000 100%); border: 2px solid #CC0000; padding: 20px; border-radius: 15px; margin-bottom: 25px; }
-                .card { background: #1a1a1a; border-left: 4px solid #CC0000; padding: 12px; margin-bottom: 12px; }
-                .card small { color: #CC0000; font-weight: bold; text-transform: uppercase; font-size: 0.7rem; }
-                .card a { color: #fff; text-decoration: none; }
-                .btn { background: #CC0000; color: #fff; display: block; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+                .carnet { background: linear-gradient(135deg, #222 0%, #000 100%); border: 2px solid #CC0000; padding: 20px; border-radius: 15px; }
+                .btn { background: #CC0000; color: #fff; display: block; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px; }
             </style>
         </head>
         <body>
@@ -184,28 +164,12 @@ add_action( 'init', function() {
                 ?>
                     <div class="carnet">
                         <small style="color: #CC0000;">CARNET SINDICAL</small>
-                        <h2 style="margin: 5px 0;"><?php echo wp_get_current_user()->display_name; ?></h2>
-                        <p style="font-size: 0.9rem; margin: 0; opacity: 0.8;">
-                            <?php echo esc_html($data->sector); ?><br>
-                            DNI: <?php echo Montseny_Crypto::decrypt($data->dni_cifrado); ?>
-                        </p>
+                        <h2><?php echo wp_get_current_user()->display_name; ?></h2>
+                        <p><?php echo esc_html($data->sector); ?><br>DNI: <?php echo Montseny_Crypto::decrypt($data->dni_cifrado); ?></p>
                     </div>
-
-                    <h3>Actualidad Sindical</h3>
-                    <?php foreach ( $noticias as $n ) : ?>
-                        <div class="card">
-                            <small><?php echo $n['fuente']; ?></small>
-                            <a href="<?php echo $n['link']; ?>" target="_blank"><h4><?php echo $n['titulo']; ?></h4></a>
-                        </div>
-                    <?php endforeach; ?>
-
-                    <a href="<?php echo wp_logout_url(site_url('/montseny')); ?>" style="color: #444; display: block; text-align: center; margin-top: 30px; text-decoration: none;">Cerrar Sesión</a>
+                    <a href="<?php echo wp_logout_url(site_url('/montseny')); ?>" style="color: #444; display: block; text-align: center; margin-top: 30px;">Cerrar Sesión</a>
                 <?php else : ?>
-                    <div class="card" style="text-align: center; padding: 40px 20px;">
-                        <h3>Identificación</h3>
-                        <p>Accede para ver tu carnet y noticias privadas.</p>
-                        <a href="<?php echo wp_login_url(site_url('/montseny')); ?>" class="btn">ENTRAR</a>
-                    </div>
+                    <a href="<?php echo wp_login_url(site_url('/montseny')); ?>" class="btn">ENTRAR</a>
                 <?php endif; ?>
             </div>
         </body>
@@ -219,16 +183,7 @@ function montseny_dash() {
     $val = get_option('montseny_nombre_local', 'CNT Ciudad Real');
     if (isset($_POST['m_save'])) {
         update_option('montseny_nombre_local', sanitize_text_field($_POST['l_name']));
-        echo '<div class="updated"><p>Actualizado.</p></div>';
         $val = $_POST['l_name'];
     }
-    ?>
-    <div class="wrap">
-        <h1>Montseny Dashboard</h1>
-        <form method="post">
-            <input type="text" name="l_name" value="<?php echo esc_attr($val); ?>" class="regular-text">
-            <input type="submit" name="m_save" class="button button-primary" value="Guardar">
-        </form>
-    </div>
-    <?php
+    echo '<div class="wrap"><h1>Panel Montseny</h1><form method="post"><input type="text" name="l_name" value="'.esc_attr($val).'"><input type="submit" name="m_save" class="button button-primary" value="Guardar"></form></div>';
 }
