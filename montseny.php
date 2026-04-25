@@ -18,4 +18,4 @@ require_once MONTSENY_PATH . 'includes/security.php';
 require_once MONTSENY_PATH . 'includes/roles.php';
 require_once MONTSENY_PATH . 'includes/news.php';
 require_once MONTSENY_PATH . 'includes/app-ui.php';
-// El de gestión lo crearemos en el siguiente paso
+require_once MONTSENY_PATH . 'includes/gestion-ui.php';
