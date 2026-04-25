@@ -2,15 +2,15 @@
 /*
 Plugin Name: Montseny
 Plugin URI: https://ciudadreal.cnt.es
-Description: Gestión sindical v2.3 - Versión Integral (Gestión Frontend, Importador A-K, Cifrado y Estabilidad).
-Version: 2.3
+Description: Gestión sindical v2.4 - Gestión de Equipo completa y Estabilidad.
+Version: 2.4
 Author: Montseny Project
 */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 /**
- * 0. SISTEMA DE ACTUALIZACIÓN Y ESTABILIDAD DE CARPETAS
+ * 0. SISTEMA DE ACTUALIZACIÓN Y ESTABILIDAD
  */
 add_filter( 'pre_set_site_transient_update_plugins', 'montseny_check_update' );
 function montseny_check_update( $transient ) {
@@ -92,22 +92,68 @@ add_action( 'admin_menu', function() {
 });
 
 function montseny_equipo_admin() {
+    // Lógica para borrar a alguien del equipo
+    if (isset($_GET['action']) && $_GET['action'] == 'delete' && isset($_GET['user_id'])) {
+        wp_delete_user(intval($_GET['user_id']));
+        echo '<div class="updated"><p>Usuario eliminado del equipo.</p></div>';
+    }
+
     if (isset($_POST['add_eq'])) {
         $uid = wp_create_user(sanitize_email($_POST['em']), $_POST['ps'], sanitize_email($_POST['em']));
         if (!is_wp_error($uid)) {
             wp_update_user(array('ID'=>$uid, 'display_name'=>sanitize_text_field($_POST['no']), 'role'=>$_POST['ro']));
-            echo '<div class="updated"><p>Acceso creado.</p></div>';
+            echo '<div class="updated"><p>Nuevo acceso creado para el equipo.</p></div>';
+        } else {
+            echo '<div class="error"><p>Error: '.$uid->get_error_message().'</p></div>';
         }
     }
+
+    // Obtener lista de usuarios con roles de Montseny
+    $equipo = get_users(array('role__in' => array('montseny_tesorero', 'montseny_comunica')));
     ?>
-    <div class="wrap"><h1>Crear Equipo de Gestión</h1>
-    <form method="post" style="max-width:400px; background:#fff; padding:20px; border:1px solid #ccc;">
-        <input type="text" name="no" placeholder="Nombre" required class="regular-text"><br><br>
-        <input type="email" name="em" placeholder="Email" required class="regular-text"><br><br>
-        <input type="text" name="ps" placeholder="Contraseña" required class="regular-text"><br><br>
-        <select name="ro" style="width:100%"><option value="montseny_tesorero">Tesorería</option><option value="montseny_comunica">Comunicación</option></select><br><br>
-        <input type="submit" name="add_eq" class="button button-primary" value="Crear Acceso">
-    </form></div>
+    <div class="wrap">
+        <h1>Gestión de Equipo Montseny</h1>
+        
+        <div style="display: flex; gap: 20px; align-items: flex-start;">
+            <!-- Formulario Alta -->
+            <form method="post" style="flex: 1; background:#fff; padding:20px; border:1px solid #ccc; max-width: 400px;">
+                <h3>Añadir al equipo</h3>
+                <input type="text" name="no" placeholder="Nombre" required style="width:100%; margin-bottom:10px;"><br>
+                <input type="email" name="em" placeholder="Email" required style="width:100%; margin-bottom:10px;"><br>
+                <input type="text" name="ps" placeholder="Contraseña" required style="width:100%; margin-bottom:10px;"><br>
+                <select name="ro" style="width:100%; margin-bottom:15px;">
+                    <option value="montseny_tesorero">Tesorería</option>
+                    <option value="montseny_comunica">Comunicación</option>
+                </select>
+                <input type="submit" name="add_eq" class="button button-primary" value="Crear Acceso">
+            </form>
+
+            <!-- Lista de Equipo -->
+            <div style="flex: 2;">
+                <h3>Personal Actual</h3>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach($equipo as $user): ?>
+                        <tr>
+                            <td><strong><?php echo $user->display_name; ?></strong></td>
+                            <td><?php echo $user->user_email; ?></td>
+                            <td><?php echo (in_array('montseny_tesorero', $user->roles)) ? 'Tesorería' : 'Comunicación'; ?></td>
+                            <td><a href="?page=montseny-equipo&action=delete&user_id=<?php echo $user->ID; ?>" class="button button-link-delete" onclick="return confirm('¿Seguro que quieres quitar el acceso a este compañero?')">Eliminar</a></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     <?php
 }
 
@@ -131,14 +177,14 @@ add_action( 'init', function() {
 
 function montseny_ui_app() {
     $local = get_option('montseny_nombre_local', 'CNT');
-    $tg = get_option('montseny_telegram_alias', 'cnt_nacional');
+    $tg_alias = get_option('montseny_telegram_alias', 'cnt_nacional');
     ?>
     <!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { font-family: sans-serif; background: #000; color: #fff; margin: 0; padding-bottom: 60px; }
         .bar { background: #CC0000; padding: 20px; text-align: center; font-weight: bold; }
         .container { padding: 15px; }
-        .card { background: #1a1a1a; border-left: 4px solid #CC0000; padding: 15px; margin-bottom: 12px; }
+        .card { background: #1a1a1a; border-left: 4px solid #CC0000; padding: 15px; margin-bottom: 12px; border-radius: 4px; }
         .btn { background: #CC0000; color: #fff; display: block; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; border:none; width:100%; cursor:pointer; }
     </style></head><body>
     <div class="bar">MONTSENY - <?php echo $local; ?></div>
@@ -148,7 +194,7 @@ function montseny_ui_app() {
             <?php if (current_user_can('montseny_tesorero') || current_user_can('manage_options')) : ?>
                 <a href="<?php echo site_url('/montseny/gestion'); ?>" class="btn" style="background:#333;">⚙️ PANEL DE GESTIÓN</a>
             <?php endif; ?>
-            <a href="<?php echo wp_logout_url(site_url('/montseny')); ?>" style="color:#444; display:block; text-align:center; margin-top:30px;">Cerrar Sesión</a>
+            <a href="<?php echo wp_logout_url(site_url('/montseny')); ?>" style="color:#444; display:block; text-align:center; margin-top:30px; text-decoration:none;">Cerrar Sesión</a>
         <?php else : ?>
             <form method="post">
                 <h3>Identificación</h3>
@@ -212,8 +258,8 @@ function montseny_ui_gestion() {
             <form method="post">
                 <input type="hidden" name="uid" value="<?php echo $uid; ?>">
                 <label>Nombre</label><input type="text" name="no" value="<?php echo $u->display_name; ?>">
-                <label>Email (Login)</label><input type="email" name="em" value="<?php echo (strpos($u->user_email, '@temporal.cnt')===false)?$u->user_email:''; ?>" placeholder="Añadir email real">
-                <label>Nueva Contraseña</label><input type="text" name="pw" placeholder="Solo si quieres cambiarla">
+                <label>Email (Login)</label><input type="email" name="em" value="<?php echo (strpos($u->user_email, '@temporal.cnt')===false)?$u->user_email:''; ?>">
+                <label>Nueva Contraseña</label><input type="text" name="pw" placeholder="Sólo si quieres cambiarla">
                 <label>IBAN (Cifrado)</label><input type="text" name="ib" value="<?php echo Montseny_Crypto::decrypt($c->iban_cifrado); ?>">
                 <label>Dirección (Cifrada)</label><input type="text" name="di" value="<?php echo Montseny_Crypto::decrypt($c->direccion_cifrada); ?>">
                 <label>Etiquetas</label><input type="text" name="ta" value="<?php echo $c->etiquetas; ?>">
@@ -239,12 +285,16 @@ function montseny_ui_gestion() {
 }
 
 function montseny_dash_admin() {
-    if (isset($_POST['m_s'])) { update_option('montseny_nombre_local', sanitize_text_field($_POST['l'])); update_option('montseny_telegram_alias', sanitize_text_field($_POST['t'])); echo '<div class="updated"><p>Ok.</p></div>'; }
+    if (isset($_POST['m_s'])) { 
+        update_option('montseny_nombre_local', sanitize_text_field($_POST['l'])); 
+        update_option('montseny_telegram_alias', sanitize_text_field($_POST['t'])); 
+        echo '<div class="updated"><p>Configuración actualizada.</p></div>'; 
+    }
     $l = get_option('montseny_nombre_local', 'CNT'); $t = get_option('montseny_telegram_alias', 'cnt_nacional');
     ?>
     <div class="wrap"><h1>Configuración Montseny</h1><form method="post">
-        Sindicato: <input type="text" name="l" value="<?php echo esc_attr($l); ?>"><br>
-        Telegram Alias: <input type="text" name="t" value="<?php echo esc_attr($t); ?>"><br>
+        Sindicato: <input type="text" name="l" value="<?php echo esc_attr($l); ?>"><br><br>
+        Telegram Alias: <input type="text" name="t" value="<?php echo esc_attr($t); ?>"><br><br>
         <input type="submit" name="m_s" class="button button-primary" value="Guardar">
     </form></div>
     <?php
