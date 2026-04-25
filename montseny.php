@@ -9,11 +9,13 @@ Author: Montseny Project
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-// Definimos la ruta del plugin para que los otros archivos no se pierdan
 define( 'MONTSENY_PATH', plugin_dir_path( __FILE__ ) );
 
-// Llamamos a los "cajones" (archivos) que vamos a crear
+// Cargamos todos los módulos
 require_once MONTSENY_PATH . 'includes/updater.php';
 require_once MONTSENY_PATH . 'includes/database.php';
+require_once MONTSENY_PATH . 'includes/security.php';
 require_once MONTSENY_PATH . 'includes/roles.php';
-// (Iremos añadiendo el resto conforme los creemos)
+require_once MONTSENY_PATH . 'includes/news.php';
+require_once MONTSENY_PATH . 'includes/app-ui.php';
+// El de gestión lo crearemos en el siguiente paso
