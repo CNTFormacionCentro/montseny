@@ -1,0 +1,24 @@
+{
+  "name": "Montseny - CNT Ciudad Real",
+  "short_name": "Montseny",
+  "description": "Gestión sindical confederada",
+  "start_url": "/montseny/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#CC0000",
+  "icons": [
+    {
+      "src": "https://ciudadreal.cnt.es/wp-content/uploads/2016/11/cropped-favicon.png",
+      "sizes": "192x192",
+      "type" : "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://ciudadreal.cnt.es/wp-content/uploads/2016/11/cropped-favicon.png",
+      "sizes": "512x512",
+      "type" : "image/png",
+      "purpose": "any"
+    }
+  ]
+}
